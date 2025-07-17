@@ -368,8 +368,9 @@ jobs:
           persist-credentials: false
       - name: cl.exe version
         run: |
-            CALL "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" arm64
+            "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" arm64
             cl.exe
+        shell: cmd
         if: matrix.WINDOWS.ARCH == 'arm64'
       - name: Setup python
         id: setup-python
