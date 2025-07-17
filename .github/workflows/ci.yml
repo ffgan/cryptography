@@ -366,8 +366,9 @@ jobs:
         timeout-minutes: 3
         with:
           persist-credentials: false
-      - name: cl.exe version
+      - name: Try upgrading vs oh god
         run: |
+            choco install visualstudio2022buildtools
             "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" arm64
             cl.exe
         shell: cmd
