@@ -368,7 +368,6 @@ jobs:
           persist-credentials: false
       - name: cl.exe version
         run: |
-            "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\BuildTools\Common7\Tools\VsDevCmd.bat" -arch=arm64
             "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" arm64
             cl.exe
         if: matrix.WINDOWS.ARCH == 'arm64'
