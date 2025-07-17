@@ -368,12 +368,8 @@ jobs:
           persist-credentials: false
       - name: cl.exe version
         run: |
-            for /f "usebackq tokens=*" %%i in (`vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.arm64 -property installationPath`) do (
-              set InstallDir=%%i
-            )
-            if exist "%InstallDir%\Common7\Tools\vsdevcmd.bat" (
-              "%InstallDir%\Common7\Tools\vsdevcmd.bat" -arch=arm64 -host_arch=arm64
-            )
+            "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\BuildTools\Common7\Tools\VsDevCmd.bat" -arch=arm64
+            "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" arm64
             cl.exe
         if: matrix.WINDOWS.ARCH == 'arm64'
       - name: Setup python
