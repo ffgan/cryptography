@@ -325,7 +325,25 @@ jobs:
         #   # OPENSSL_ENABLE_SHA1_SIGNATURES is for CentOS 9 Stream
         #   OPENSSL_ENABLE_SHA1_SIGNATURES: 1
         #   NOXSESSION: ${{ matrix.IMAGE.NOXSESSION }}
-      - uses: ./.github/actions/upload-coverage
+      # - uses: ./.github/actions/upload-coverage
+
+      - run: |
+          COVERAGE_UUID=$(python3 -c "import uuid; print(uuid.uuid4())")
+          echo "COVERAGE_UUID=${COVERAGE_UUID}" >> $GITHUB_OUTPUT
+          docker cp test-rv64:/root/src/.coverage ./
+          if [ -f .coverage ]; then
+            mv .coverage .coverage.${COVERAGE_UUID}
+          fi
+        id: coverage-uuid
+        shell: bash
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-data-${{ steps.coverage-uuid.outputs.COVERAGE_UUID }}
+          path: |
+            .coverage.*
+            *.lcov
+          if-no-files-found: ignore
+          include-hidden-files: true
 
       - name: cleanup container
         if: always()
