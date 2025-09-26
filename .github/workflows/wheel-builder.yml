@@ -203,13 +203,12 @@ jobs:
 
       - run: docker exec build-cryptography bash -c "pwd && ls -alh"
 
+      - name: copy artifact to container
+        run: docker cp dist/cryptography*.tar.gz build-cryptography:/root/
+
       - name: Build the wheel
         run: |
           docker exec build-cryptography bash -c '
-          echo "--> Installing Rust target: riscv64gc-unknown-linux-gnu"
-          rustup target add riscv64gc-unknown-linux-gnu
-          echo "--> Rust target installed successfully."
-
           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; 
           then 
               PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}" 
