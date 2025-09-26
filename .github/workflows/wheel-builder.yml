@@ -212,7 +212,7 @@ jobs:
           else
             PY_LIMITED_API="--config-settings=build-args=--target=riscv64gc-unknown-linux-gnu" 
           fi 
-          export MATURIN_BUILD_ARGS="--target riscv64gc-unknown-linux-gnu"
+
           # The manylinux-entrypoint script accounts for uname issues, otherwise 
           # the platform tag on armv7 wheels might be tagged as aarch64 under 
           # docker running on an arm64 CPU 
