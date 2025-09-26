@@ -139,7 +139,7 @@ jobs:
       
       # TODO: start the container and run everything else inside it
       - name: start container
-        run: docker run --platform linux/riscv64 -d --name build-cryptography -v ./:/root ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }} bash -c "while true; do sleep 30; done"
+        run: docker run -d --name build-cryptography -v ./:/root ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }} bash -c "while true; do sleep 30; done"
 
       - name: show uname
         run: docker exec build-cryptography uname -a
