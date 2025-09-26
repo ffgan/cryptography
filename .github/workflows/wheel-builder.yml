@@ -181,6 +181,11 @@ jobs:
         with:
           name: cryptography-sdist
 
+      - # Add support for more platforms with QEMU (optional)
+        # https://github.com/docker/setup-qemu-action
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       # TODO: start the container and run everything else inside it
       - name: start container
         run: docker run -d --platform linux/riscv64 --name build-cryptography -v ./:/root ghcr.io/ffgan/${{ matrix.MANYLINUX.CONTAINER }} bash -c "while true; do sleep 30; done"
