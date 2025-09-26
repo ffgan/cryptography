@@ -203,8 +203,10 @@ jobs:
 
       - run: docker exec build-cryptography bash -c "pwd && ls -alh"
 
+      - run: pwd && ls -alh
+
       - name: copy artifact to container
-        run: docker cp -r ./ build-cryptography:/root/
+        run: docker cp ./ build-cryptography:/root/
 
       - name: Build the wheel
         run: |
