@@ -185,6 +185,9 @@ jobs:
       - name: start container
         run: docker run -d --platform linux/riscv64 --name build-cryptography -v ./:/root ghcr.io/ffgan/${{ matrix.MANYLINUX.CONTAINER }} bash -c "while true; do sleep 30; done"
 
+      - name: show container
+        run: sleep 5 && docker ps -a
+
       - name: show uname
         run: docker exec build-cryptography uname -a
 
