@@ -308,6 +308,7 @@ jobs:
       #   if: matrix.IMAGE.FIPS
       - run: |
           docker exec test-rv64 bash -c "echo \"export OPENSSL_FORCE_FIPS_MODE=1\" >> /root/.bashrc"
+          docker exec test-rv64 bash -c "source /root/.bashrc"
         if: matrix.IMAGE.FIPS
 
       - run: docker exec test-rv64 bash -c "ls -lah /root/src"
