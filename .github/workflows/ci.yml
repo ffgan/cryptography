@@ -315,12 +315,12 @@ jobs:
 
       - run: docker exec test-rv64 bash -c "cd /root/src &&
           /venv/bin/python -m pip install -c ci-constraints-requirements.txt 'nox[uv]' 'tomli; python_version < \"3.11\"' "
-      - run: docker exec test-rv64 bash -c "cd /root/src && OPENSSL_ENABLE_SHA1_SIGNATURES=1 NOXSESSION=${{ matrix.IMAGE.NOXSESSION }} /venv/bin/nox -v --install-only"
+      - run: docker exec test-rv64 bash -c "cd /root/src && OPENSSL_ENABLE_SHA1_SIGNATURES=1 OPENSSL_FORCE_FIPS_MODE=1 NOXSESSION=${{ matrix.IMAGE.NOXSESSION }} /venv/bin/nox -v --install-only"
         # env:
         #   # OPENSSL_ENABLE_SHA1_SIGNATURES is for CentOS 9 Stream
         #   OPENSSL_ENABLE_SHA1_SIGNATURES: 1
         #   NOXSESSION: ${{ matrix.IMAGE.NOXSESSION }}
-      - run: docker exec test-rv64 bash -c 'cd /root/src && COLUMNS=80 OPENSSL_ENABLE_SHA1_SIGNATURES=1 NOXSESSION=${{ matrix.IMAGE.NOXSESSION }} /venv/bin/nox --no-install --  --color=yes --wycheproof-root="wycheproof" --x509-limbo-root="x509-limbo"'
+      - run: docker exec test-rv64 bash -c 'cd /root/src && COLUMNS=80 OPENSSL_ENABLE_SHA1_SIGNATURES=1 OPENSSL_FORCE_FIPS_MODE=1 NOXSESSION=${{ matrix.IMAGE.NOXSESSION }} /venv/bin/nox --no-install --  --color=yes --wycheproof-root="wycheproof" --x509-limbo-root="x509-limbo"'
         # env:
         #   COLUMNS: 80
         #   # OPENSSL_ENABLE_SHA1_SIGNATURES is for CentOS 9 Stream
