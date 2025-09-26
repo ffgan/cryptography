@@ -170,7 +170,7 @@ jobs:
       - run: |
           docker exec build-cryptography bash -c '
           results=$(readelf -lW execstack.check/cryptography/hazmat/bindings/*.so)
-          count=$(echo "$results" | grep -c 'GNU_STACK.*[R ][W ]E' || true)
+          count=$(echo "$results" | grep -c "GNU_STACK.*[R ][W ]E" || true)
           if [ "$count" -ne 0 ]; then
             exit 1
           else
@@ -181,9 +181,12 @@ jobs:
       - run: docker exec build-cryptography uv pip install --require-hashes -r $BUILD_REQUIREMENTS_PATH
       - run: docker exec build-cryptography uv pip install cryptography --no-index -f wheelhouse/
       - run: |
-          echo "from cryptography.hazmat.backends.openssl.backend import backend;print('Loaded: ' + backend.openssl_version_text());print('Linked Against: ' + backend._ffi.string(backend._lib.OPENSSL_VERSION_TEXT).decode('ascii'))" | uv run -
-
+          docker exec build-cryptography bash -c '
+          echo "from cryptography.hazmat.backends.openssl.backend import backend; print(\"Loaded: \" + backend.openssl_version_text()); print(\"Linked Against: \" + backend._ffi.string(backend._lib.OPENSSL_VERSION_TEXT).decode(\"ascii\"))" | uv run -
+          '
       # TODO: cp artifact to runner
+      - run: |
+          docker cp build-cryptography:/root/wheelhouse ./
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
