@@ -204,7 +204,7 @@ jobs:
       - run: docker exec build-cryptography bash -c "pwd && ls -alh"
 
       - name: copy artifact to container
-        run: docker cp dist/cryptography*.tar.gz build-cryptography:/root/
+        run: docker cp -r ./ build-cryptography:/root/
 
       - name: Build the wheel
         run: |
