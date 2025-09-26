@@ -208,9 +208,7 @@ jobs:
           docker exec build-cryptography bash -c '
           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; 
           then 
-            PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}     --config-settings=build-args=--target=riscv64gc-unknown-linux-gnu"
-          else
-            PY_LIMITED_API="--config-settings=build-args=--target=riscv64gc-unknown-linux-gnu" 
+              PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}" 
           fi 
 
           # The manylinux-entrypoint script accounts for uname issues, otherwise 
