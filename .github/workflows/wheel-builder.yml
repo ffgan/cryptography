@@ -199,7 +199,7 @@ jobs:
       # - name: setup venv
       #   run: docker exec build-cryptography python -m venv /src/venv
 
-      - run: docker exec build-cryptography mkdir /root/tmpwheelhouse
+      - run: docker exec build-cryptography mkdir tmpwheelhouse
 
       - run: docker exec build-cryptography bash -c "pwd && ls -alh"
 
@@ -221,6 +221,8 @@ jobs:
           # docker running on an arm64 CPU 
           RUSTUP_HOME=/root/.rustup CARGO_BUILD_TARGET=riscv64gc-unknown-linux-gnu OPENSSL_DIR="/opt/pyca/cryptography/openssl"  OPENSSL_STATIC=1 manylinux-entrypoint uv build --python=/opt/python/${{ matrix.PYTHON.VERSION }}/bin/python --wheel  --build-constraint=$BUILD_REQUIREMENTS_PATH $PY_LIMITED_API cryptography*.tar.gz -o tmpwheelhouse/
           '
+
+      - run: docker exec build-cryptography bash -c "pwd && ls -alh tmpwheelhouse/"
 
       - run: docker exec build-cryptography auditwheel repair --plat ${{ matrix.MANYLINUX.NAME }} tmpwheelhouse/cryptography*.whl -w wheelhouse/
       - run: docker exec build-cryptography unzip wheelhouse/*.whl -d execstack.check
