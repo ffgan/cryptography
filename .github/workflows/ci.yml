@@ -242,7 +242,7 @@ jobs:
           # - {IMAGE: "centos-stream10", NOXSESSION: "tests", RUNNER: "ubuntu-latest"}
           # - {IMAGE: "centos-stream10-fips", NOXSESSION: "tests", RUNNER: "ubuntu-latest", FIPS: true}
 
-    timeout-minutes: 15
+    # timeout-minutes: 15
     # env:
     #   RUSTUP_HOME: /root/.rustup
     steps:
