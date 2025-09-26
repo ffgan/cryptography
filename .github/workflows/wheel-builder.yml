@@ -79,7 +79,7 @@ jobs:
           #   }
           - {
               NAME: "manylinux_2_39_riscv64",
-              CONTAINER: "cryptography-manylinux_2_39:riscv64",
+              CONTAINER: "cryptography-manylinux_2_39:riscv64-nonodejs",
               RUNNER: "ubuntu-latest",
             }
           # - { NAME: "manylinux_2_34_x86_64", CONTAINER: "cryptography-manylinux_2_34:x86_64", RUNNER: "ubuntu-latest"}
