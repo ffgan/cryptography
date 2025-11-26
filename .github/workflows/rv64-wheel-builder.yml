@@ -45,8 +45,8 @@ jobs:
   manylinux:
     needs: [sdist]
     runs-on: ${{ matrix.MANYLINUX.RUNNER }}
-    # container:
-    #   image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+    container:
+      image: ghcr.io/ffgan/${{ matrix.MANYLINUX.CONTAINER }}
     strategy:
       fail-fast: false
       matrix:
@@ -56,7 +56,7 @@ jobs:
           - {
               NAME: "manylinux_2_39_riscv64",
               CONTAINER: "cryptography-manylinux_2_39:riscv64-nonodejs",
-              RUNNER: "ubuntu-latest",
+              RUNNER: "RISCV64",
             }
 
     name: "${{ matrix.PYTHON.VERSION }} for ${{ matrix.MANYLINUX.NAME }}"
@@ -75,36 +75,35 @@ jobs:
         with:
           name: cryptography-sdist
 
-      - # Add support for more platforms with QEMU (optional)
-        # https://github.com/docker/setup-qemu-action
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      # - # Add support for more platforms with QEMU (optional)
+      #   # https://github.com/docker/setup-qemu-action
+      #   name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
 
-      # TODO: start the container and run everything else inside it
-      - name: start container
-        run: docker run -d --platform linux/riscv64 --name build-cryptography ghcr.io/ffgan/${{ matrix.MANYLINUX.CONTAINER }} bash -c "while true; do sleep 30; done"
+      # # TODO: start the container and run everything else inside it
+      # - name: start container
+      #   run: docker run -d --platform linux/riscv64 --name build-cryptography ghcr.io/ffgan/${{ matrix.MANYLINUX.CONTAINER }} bash -c "while true; do sleep 30; done"
 
-      - name: show container
-        run: sleep 5 && docker ps -a
+      # - name: show container
+      #   run: sleep 5 && docker ps -a
 
       - name: show uname
-        run: docker exec build-cryptography uname -a
+        run: uname -a
 
       # - name: setup venv
       #   run: docker exec build-cryptography python -m venv /src/venv
 
-      - run: docker exec build-cryptography mkdir tmpwheelhouse
+      - run: mkdir tmpwheelhouse
 
-      - run: docker exec build-cryptography bash -c "pwd && ls -alh"
+      # - run: docker exec build-cryptography bash -c "pwd && ls -alh"
 
       - run: pwd && ls -alh
 
-      - name: copy artifact to container
-        run: docker cp ./ build-cryptography:/root/
+      # - name: copy artifact to container
+      #   run: docker cp ./ build-cryptography:/root/
 
       - name: Build the wheel
         run: |
-          docker exec build-cryptography bash -c '
           if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; 
           then 
               PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}" 
@@ -114,14 +113,12 @@ jobs:
           # the platform tag on armv7 wheels might be tagged as aarch64 under 
           # docker running on an arm64 CPU 
           RUSTUP_HOME=/root/.rustup CARGO_BUILD_TARGET=riscv64gc-unknown-linux-gnu OPENSSL_DIR="/opt/pyca/cryptography/openssl"  OPENSSL_STATIC=1 manylinux-entrypoint uv build --python=/opt/python/${{ matrix.PYTHON.VERSION }}/bin/python --wheel  --build-constraint=$BUILD_REQUIREMENTS_PATH $PY_LIMITED_API cryptography*.tar.gz -o tmpwheelhouse/
-          '
 
-      - run: docker exec build-cryptography bash -c "pwd && ls -alh tmpwheelhouse/"
+      - run: pwd && ls -alh tmpwheelhouse/
 
-      - run: docker exec build-cryptography bash -c "auditwheel repair --plat ${{ matrix.MANYLINUX.NAME }} tmpwheelhouse/cryptography*.whl -w wheelhouse/"
-      - run: docker exec build-cryptography bash -c "unzip wheelhouse/*.whl -d execstack.check"
+      - run: auditwheel repair --plat ${{ matrix.MANYLINUX.NAME }} tmpwheelhouse/cryptography*.whl -w wheelhouse/
+      - run: unzip wheelhouse/*.whl -d execstack.check
       - run: |
-          docker exec build-cryptography bash -c '
           results=$(readelf -lW execstack.check/cryptography/hazmat/bindings/*.so)
           count=$(echo "$results" | grep -c "GNU_STACK.*[R ][W ]E" || true)
           if [ "$count" -ne 0 ]; then
@@ -129,18 +126,17 @@ jobs:
           else
             exit 0
           fi
-          '
-      - run: docker exec build-cryptography uv venv --python=/opt/python/${{ matrix.PYTHON.VERSION }}/bin/python
-      - run: docker exec build-cryptography uv pip install --require-hashes -r $BUILD_REQUIREMENTS_PATH
-      - run: docker exec build-cryptography uv pip install cryptography --no-index -f wheelhouse/
+
+      - run: uv venv --python=/opt/python/${{ matrix.PYTHON.VERSION }}/bin/python
+      - run: uv pip install --require-hashes -r $BUILD_REQUIREMENTS_PATH
+      - run: uv pip install cryptography --no-index -f wheelhouse/
       - run: |
-          docker exec build-cryptography bash -c '
           echo "from cryptography.hazmat.backends.openssl.backend import backend; print(\"Loaded: \" + backend.openssl_version_text()); print(\"Linked Against: \" + backend._ffi.string(backend._lib.OPENSSL_VERSION_TEXT).decode(\"ascii\"))" | uv run -
-          '
+
       # TODO: cp artifact to runner
-      - run: mkdir runner-wheelhouse
-      - run: |
-          docker cp build-cryptography:/root/wheelhouse ./runner-wheelhouse
+      # - run: mkdir runner-wheelhouse
+      # - run: |
+      #     docker cp build-cryptography:/root/wheelhouse ./runner-wheelhouse
       - run: ls -alh runner-wheelhouse
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
