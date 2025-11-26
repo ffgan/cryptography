@@ -1,0 +1,148 @@
+name: riscv64 Wheel Builder
+permissions:
+  contents: read
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to build
+  push:
+
+env:
+  BUILD_REQUIREMENTS_PATH: .github/requirements/build-requirements.txt
+  UV_REQUIREMENTS_PATH: .github/requirements/uv-requirements.txt
+
+jobs:
+  sdist:
+    runs-on: ubuntu-latest
+    name: sdists
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          # The tag to build or the tag received by the tag event
+          ref: ${{ github.event.inputs.version || github.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.13"
+        timeout-minutes: 3
+      - run: python -m pip install -r $UV_REQUIREMENTS_PATH
+
+      - name: Make sdist (cryptography)
+        run: uv build --build-constraint=$BUILD_REQUIREMENTS_PATH --require-hashes --sdist
+      - name: Make sdist and wheel (vectors)
+        run: uv build --build-constraint=$BUILD_REQUIREMENTS_PATH --require-hashes vectors/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: "cryptography-sdist"
+          path: dist/cryptography*
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: "vectors-sdist-wheel"
+          path: vectors/dist/cryptography*
+
+  manylinux:
+    needs: [sdist]
+    runs-on: ${{ matrix.MANYLINUX.RUNNER }}
+    # container:
+    #   image: ghcr.io/pyca/${{ matrix.MANYLINUX.CONTAINER }}
+    strategy:
+      fail-fast: false
+      matrix:
+        PYTHON:
+          - { VERSION: "cp311-cp311", ABI_VERSION: "py311" }
+        MANYLINUX:
+          - {
+              NAME: "manylinux_2_39_riscv64",
+              CONTAINER: "cryptography-manylinux_2_39:riscv64-nonodejs",
+              RUNNER: "ubuntu-latest",
+            }
+
+    name: "${{ matrix.PYTHON.VERSION }} for ${{ matrix.MANYLINUX.NAME }}"
+    steps:
+      - name: Get build-requirements.txt from repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          # The tag to build or the tag received by the tag event
+          ref: ${{ github.event.inputs.version || github.ref }}
+          persist-credentials: false
+          sparse-checkout: |
+            ${{ env.BUILD_REQUIREMENTS_PATH }}
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: cryptography-sdist
+
+      - # Add support for more platforms with QEMU (optional)
+        # https://github.com/docker/setup-qemu-action
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # TODO: start the container and run everything else inside it
+      - name: start container
+        run: docker run -d --platform linux/riscv64 --name build-cryptography ghcr.io/ffgan/${{ matrix.MANYLINUX.CONTAINER }} bash -c "while true; do sleep 30; done"
+
+      - name: show container
+        run: sleep 5 && docker ps -a
+
+      - name: show uname
+        run: docker exec build-cryptography uname -a
+
+      # - name: setup venv
+      #   run: docker exec build-cryptography python -m venv /src/venv
+
+      - run: docker exec build-cryptography mkdir tmpwheelhouse
+
+      - run: docker exec build-cryptography bash -c "pwd && ls -alh"
+
+      - run: pwd && ls -alh
+
+      - name: copy artifact to container
+        run: docker cp ./ build-cryptography:/root/
+
+      - name: Build the wheel
+        run: |
+          docker exec build-cryptography bash -c '
+          if [ -n "${{ matrix.PYTHON.ABI_VERSION }}" ]; 
+          then 
+              PY_LIMITED_API="--config-settings=build-args=--features=pyo3/abi3-${{ matrix.PYTHON.ABI_VERSION }}" 
+          fi 
+
+          # The manylinux-entrypoint script accounts for uname issues, otherwise 
+          # the platform tag on armv7 wheels might be tagged as aarch64 under 
+          # docker running on an arm64 CPU 
+          RUSTUP_HOME=/root/.rustup CARGO_BUILD_TARGET=riscv64gc-unknown-linux-gnu OPENSSL_DIR="/opt/pyca/cryptography/openssl"  OPENSSL_STATIC=1 manylinux-entrypoint uv build --python=/opt/python/${{ matrix.PYTHON.VERSION }}/bin/python --wheel  --build-constraint=$BUILD_REQUIREMENTS_PATH $PY_LIMITED_API cryptography*.tar.gz -o tmpwheelhouse/
+          '
+
+      - run: docker exec build-cryptography bash -c "pwd && ls -alh tmpwheelhouse/"
+
+      - run: docker exec build-cryptography bash -c "auditwheel repair --plat ${{ matrix.MANYLINUX.NAME }} tmpwheelhouse/cryptography*.whl -w wheelhouse/"
+      - run: docker exec build-cryptography bash -c "unzip wheelhouse/*.whl -d execstack.check"
+      - run: |
+          docker exec build-cryptography bash -c '
+          results=$(readelf -lW execstack.check/cryptography/hazmat/bindings/*.so)
+          count=$(echo "$results" | grep -c "GNU_STACK.*[R ][W ]E" || true)
+          if [ "$count" -ne 0 ]; then
+            exit 1
+          else
+            exit 0
+          fi
+          '
+      - run: docker exec build-cryptography uv venv --python=/opt/python/${{ matrix.PYTHON.VERSION }}/bin/python
+      - run: docker exec build-cryptography uv pip install --require-hashes -r $BUILD_REQUIREMENTS_PATH
+      - run: docker exec build-cryptography uv pip install cryptography --no-index -f wheelhouse/
+      - run: |
+          docker exec build-cryptography bash -c '
+          echo "from cryptography.hazmat.backends.openssl.backend import backend; print(\"Loaded: \" + backend.openssl_version_text()); print(\"Linked Against: \" + backend._ffi.string(backend._lib.OPENSSL_VERSION_TEXT).decode(\"ascii\"))" | uv run -
+          '
+      # TODO: cp artifact to runner
+      - run: mkdir runner-wheelhouse
+      - run: |
+          docker cp build-cryptography:/root/wheelhouse ./runner-wheelhouse
+      - run: ls -alh runner-wheelhouse
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: "cryptography-${{ github.event.inputs.version }}-${{ matrix.MANYLINUX.NAME }}-${{ matrix.PYTHON.VERSION }}-${{ matrix.PYTHON.ABI_VERSION }}"
+          path: runner-wheelhouse/
